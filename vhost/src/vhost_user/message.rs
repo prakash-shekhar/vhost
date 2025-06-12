@@ -386,6 +386,8 @@ bitflags! {
         const LOG_ALL = 0x400_0000;
         /// Feature flag for the protocol feature.
         const PROTOCOL_FEATURES = 0x4000_0000;
+        /// Feature flag for packed virtqueue support (VIRTIO_F_RING_PACKED, bit 34).
+        const RING_PACKED = 0x4_0000_0000;
     }
 }
 
@@ -713,6 +715,9 @@ bitflags! {
         /// Support log of vring operations.
         /// Modifications to "used" vring should be logged.
         const VHOST_VRING_F_LOG = 0x1;
+        /// Indicates packed virtqueue format.
+        /// When set, the vring uses packed layout instead of split layout.
+        const VHOST_VRING_F_PACKED = 0x2;
     }
 }
 
@@ -777,12 +782,28 @@ impl VhostUserMsgValidator for VhostUserVringAddr {
     fn is_valid(&self) -> bool {
         if (self.flags & !VhostUserVringAddrFlags::all().bits()) != 0 {
             return false;
-        } else if self.descriptor & 0xf != 0 {
-            return false;
-        } else if self.available & 0x1 != 0 {
-            return false;
-        } else if self.used & 0x3 != 0 {
-            return false;
+        }
+        
+        // Check if packed ring format
+        if self.flags & VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits() != 0 {
+            // Packed ring validation:
+            // - descriptor ring must be 16-byte aligned
+            if self.descriptor & 0xf != 0 {
+                return false;
+            }
+            // - driver/device event suppression areas must be 4-byte aligned
+            if self.available & 0x3 != 0 || self.used & 0x3 != 0 {
+                return false;
+            }
+        } else {
+            // Split ring validation (current logic)
+            if self.descriptor & 0xf != 0 {
+                return false;
+            } else if self.available & 0x1 != 0 {
+                return false;
+            } else if self.used & 0x3 != 0 {
+                return false;
+            }
         }
         true
     }

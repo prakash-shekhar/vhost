@@ -783,7 +783,7 @@ impl VhostUserMsgValidator for VhostUserVringAddr {
         if (self.flags & !VhostUserVringAddrFlags::all().bits()) != 0 {
             return false;
         }
-        
+
         // Check if packed ring format
         if self.flags & VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits() != 0 {
             // Packed ring validation:
@@ -1437,5 +1437,58 @@ mod tests {
         assert!(msg.is_valid());
         msg.flags |= 0x4;
         assert!(!msg.is_valid());
+    }
+
+    #[test]
+    fn test_packed_virtqueue_features() {
+        let a = VhostUserVirtioFeatures::RING_PACKED.bits();
+        assert_eq!(a, 0x4_0000_0000);
+
+        let a = VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits();
+        assert_eq!(a, 0x2);
+
+        let combined = VhostUserVringAddrFlags::VHOST_VRING_F_LOG
+            | VhostUserVringAddrFlags::VHOST_VRING_F_PACKED;
+        let a = combined.bits();
+        assert_eq!(a, 0x3);
+    }
+
+    #[test]
+    fn test_packed_vring_addr_validation() {
+        let mut addr = VhostUserVringAddr::new(
+            0,
+            VhostUserVringAddrFlags::VHOST_VRING_F_PACKED,
+            0x1000,
+            0x2000,
+            0x3000,
+            0x4000,
+        );
+
+        let a = addr.index;
+        assert_eq!(a, 0);
+        let a = addr.flags;
+        assert_eq!(a, VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits());
+        let a = addr.descriptor;
+        assert_eq!(a, 0x1000);
+        let a = addr.used;
+        assert_eq!(a, 0x2000);
+        let a = addr.available;
+        assert_eq!(a, 0x3000);
+        let a = addr.log;
+        assert_eq!(a, 0x4000);
+        assert!(addr.is_valid());
+
+        addr.descriptor = 0x1001;
+        assert!(!addr.is_valid());
+        addr.descriptor = 0x1000;
+
+        addr.available = 0x3001;
+        assert!(!addr.is_valid());
+        addr.available = 0x3000;
+
+        addr.used = 0x2001;
+        assert!(!addr.is_valid());
+        addr.used = 0x2000;
+        assert!(addr.is_valid());
     }
 }

@@ -79,7 +79,8 @@ pub trait VhostKernBackend: AsRawFd {
 
         // Check if packed ring format is being used
         #[cfg(feature = "vhost-user")]
-        let is_packed = config_data.flags & VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits() != 0;
+        let is_packed =
+            config_data.flags & VhostUserVringAddrFlags::VHOST_VRING_F_PACKED.bits() != 0;
         #[cfg(not(feature = "vhost-user"))]
         let is_packed = false;
 

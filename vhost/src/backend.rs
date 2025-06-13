@@ -25,7 +25,7 @@ use super::{Error, Result};
 pub const VHOST_MAX_MEMORY_REGIONS: usize = 255;
 
 /// Vring configuration data.
-/// 
+///
 /// For split virtqueues (traditional layout):
 /// - `desc_table_addr`: Descriptor table address
 /// - `used_ring_addr`: Used ring buffer address  
